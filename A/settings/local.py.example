@@ -1,0 +1,22 @@
+"""Local override template.
+
+Copy this file to A/settings/local.py and set
+DJANGO_SETTINGS_MODULE=A.settings.local to apply your personal overrides
+without touching the rest of the tree. local.py is gitignored.
+"""
+
+from .base import *  # noqa: F401,F403
+from .development import *  # noqa: F401,F403
+
+# Example overrides:
+# DEBUG = True
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'crm_local',
+#         'USER': 'postgres',
+#         'PASSWORD': 'postgres',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
