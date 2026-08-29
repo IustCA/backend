@@ -88,6 +88,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             'category',
             'startDate',
             'endDate',
+            'ongoing',
             'github',
             'demo',
             'image',
@@ -176,6 +177,8 @@ class LanguageSerializer(serializers.ModelSerializer):
 class ActivitySerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     student = serializers.PrimaryKeyRelatedField(read_only=True)
+    startDate = serializers.CharField(source='start_date', required=False, allow_blank=True)
+    endDate = serializers.CharField(source='end_date', required=False, allow_blank=True)
 
     class Meta:
         model = Activity
@@ -186,6 +189,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             'organization',
             'role',
             'date',
+            'startDate',
+            'endDate',
+            'ongoing',
             'description',
             'achievements',
             'created_at',
@@ -251,10 +257,9 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 class StudentPersonalSerializer(serializers.ModelSerializer):
     fullName = serializers.SerializerMethodField()
     birthDate = serializers.CharField(source='birth_date', required=False, allow_blank=True)
-    studentId = serializers.CharField(source='student_id', read_only=True)
+    username = serializers.SerializerMethodField()
     title = serializers.CharField(source='headline', required=False, allow_blank=True)
     field = serializers.CharField(source='field_of_study', required=False, allow_blank=True)
-    email = serializers.SerializerMethodField()
     linkedin = serializers.CharField(source='linkedin_url', required=False, allow_blank=True)
     github = serializers.CharField(source='github_url', required=False, allow_blank=True)
     website = serializers.CharField(source='website_url', required=False, allow_blank=True)
@@ -263,13 +268,12 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             'fullName',
+            'username',
             'title',
             'university',
             'field',
             'semester',
             'birthDate',
-            'studentId',
-            'email',
             'phone',
             'city',
             'linkedin',
@@ -284,8 +288,8 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
         full_name = obj.user.get_full_name()
         return full_name if full_name else obj.user.username
 
-    def get_email(self, obj):
-        return obj.user.email or ''
+    def get_username(self, obj):
+        return obj.user.username
 
 
 # ==============================================================================

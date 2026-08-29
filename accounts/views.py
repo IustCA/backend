@@ -90,6 +90,45 @@ class CurrentUserView(APIView):
         })
 
 
+class AccountUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        data = request.data
+        username = data.get('username')
+        if username and username != user.username:
+            if User.objects.filter(username=username).exclude(id=user.id).exists():
+                return Response({"detail": "این نام کاربری قبلاً استفاده شده است."}, status=status.HTTP_400_BAD_REQUEST)
+            if len(username) < 3 or len(username) > 30:
+                return Response({"detail": "نام کاربری باید بین ۳ تا ۳۰ کاراکتر باشد."}, status=status.HTTP_400_BAD_REQUEST)
+            if not username.replace('_', '').replace('.', '').isalnum():
+                return Response({"detail": "نام کاربری فقط می‌تواند شامل حروف، عدد، _ و . باشد."}, status=status.HTTP_400_BAD_REQUEST)
+            user.username = username
+            user.save()
+        return Response(UserSerializer(user).data)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+        if not old_password or not new_password:
+            return Response({"detail": "رمز فعلی و رمز جدید الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
+        if not user.check_password(old_password):
+            return Response({"detail": "رمز فعلی نادرست است."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(new_password) < 6:
+            return Response({"detail": "رمز جدید باید حداقل ۶ کاراکتر باشد."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(new_password) > 128:
+            return Response({"detail": "رمز جدید خیلی طولانی است."}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_password)
+        user.save()
+        return Response({"detail": "رمز عبور با موفقیت تغییر یافت."})
+
+
 # ==============================================================================
 # 2. Unified Profile Views (Matching Frontend JSON Schema)
 # ==============================================================================
@@ -105,7 +144,7 @@ class StudentProfileView(APIView):
             user=request.user,
             defaults={'student_id': str(request.user.id)}
         )
-        serializer = StudentFullProfileSerializer(student)
+        serializer = StudentFullProfileSerializer(student, context={'request': request})
         return Response(serializer.data)
 
     def patch(self, request):
@@ -144,6 +183,32 @@ class StudentProfileView(APIView):
                 request.user.first_name = parts[0]
                 request.user.last_name = parts[1] if len(parts) > 1 else ''
                 request.user.save()
+            # avatar handling - supports multipart file or base64/data-url
+            # handle clear
+            if 'avatar' in personal_data and personal_data['avatar'] == "":
+                if student.avatar:
+                    student.avatar.delete(save=False)
+                    student.avatar = None
+            # also check FILES for avatar
+            if 'avatar' in request.FILES:
+                student.avatar = request.FILES['avatar']
+            elif 'avatar_file' in request.FILES:
+                student.avatar = request.FILES['avatar_file']
+            # handle base64 avatar sent as string
+            elif personal_data.get('avatar') and isinstance(personal_data.get('avatar'), str) and personal_data.get('avatar').startswith('data:image'):
+                try:
+                    import base64, uuid
+                    from django.core.files.base import ContentFile
+                    header, b64data = personal_data['avatar'].split(',', 1)
+                    ext = 'png'
+                    if 'jpeg' in header or 'jpg' in header:
+                        ext = 'jpg'
+                    elif 'webp' in header:
+                        ext = 'webp'
+                    decoded = base64.b64decode(b64data)
+                    student.avatar.save(f"avatar_{uuid.uuid4().hex[:8]}.{ext}", ContentFile(decoded), save=False)
+                except Exception:
+                    pass
             student.save()
 
         # 2. Update interests if provided as a list of strings
@@ -153,7 +218,7 @@ class StudentProfileView(APIView):
                 Interest(student=student, name=item) for item in data['interests'] if str(item).strip()
             ])
 
-        serializer = StudentFullProfileSerializer(student)
+        serializer = StudentFullProfileSerializer(student, context={'request': request})
         return Response(serializer.data)
 
     def put(self, request):

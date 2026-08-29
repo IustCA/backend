@@ -230,6 +230,10 @@ class Project(models.Model):
         default='فردی',
         verbose_name="نوع تیم (فردی / تیمی)"
     )
+    ongoing = models.BooleanField(
+        default=False,
+        verbose_name="پروژه در حال انجام است"
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="تاریخ ایجاد"
@@ -540,10 +544,24 @@ class Activity(models.Model):
         blank=True,
         verbose_name="نقش / سمت"
     )
+    start_date = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="تاریخ شروع"
+    )
+    end_date = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="تاریخ پایان"
+    )
+    ongoing = models.BooleanField(
+        default=False,
+        verbose_name="در حال انجام"
+    )
     date = models.CharField(
         max_length=100,
         blank=True,
-        verbose_name="بازه زمانی / تاریخ"
+        verbose_name="بازه زمانی / تاریخ (قدیمی)"
     )
     description = models.TextField(
         blank=True,
