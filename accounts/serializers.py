@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import (
     Student,
     Project,
@@ -27,45 +28,30 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6, style={'input_type': 'password'})
-    student_id = serializers.CharField(write_only=True, required=True)
-    full_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+class NationalIdPhoneTokenSerializer(serializers.Serializer):
+    national_id = serializers.CharField(max_length=10, write_only=True)
+    phone_number = serializers.CharField(max_length=30, write_only=True)
 
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'password', 'student_id', 'full_name', 'email')
-        extra_kwargs = {
-            'email': {'required': False, 'allow_blank': True}
+    default_error_messages = {
+        'no_active_account': 'کد ملی یا شماره تماس نادرست است.',
+    }
+
+    def validate(self, attrs):
+        national_id = attrs['national_id'].strip()
+        phone_number = attrs['phone_number'].strip()
+        student = Student.objects.select_related('user').filter(
+            national_id=national_id,
+            phone=phone_number,
+        ).first()
+
+        if student is None or not student.user.is_active:
+            self.fail('no_active_account')
+
+        refresh = RefreshToken.for_user(student.user)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
         }
-
-    def validate_student_id(self, value):
-        if Student.objects.filter(student_id=value).exists():
-            raise serializers.ValidationError("دانشجویی با این شماره دانشجویی قبلاً ثبت‌نام کرده است.")
-        return value
-
-    def create(self, validated_data):
-        student_id = validated_data.pop('student_id')
-        full_name = validated_data.pop('full_name', '')
-        first_name = ''
-        last_name = ''
-        if full_name:
-            parts = full_name.split(' ', 1)
-            first_name = parts[0]
-            last_name = parts[1] if len(parts) > 1 else ''
-
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            password=validated_data['password'],
-            email=validated_data.get('email', ''),
-            first_name=first_name,
-            last_name=last_name
-        )
-        Student.objects.create(
-            user=user,
-            student_id=student_id
-        )
-        return user
 
 
 # ==============================================================================

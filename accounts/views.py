@@ -1,9 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, permissions, status, viewsets
+from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import (
@@ -22,7 +21,7 @@ from .models import (
 from .permissions import IsOwnerOrReadOnly
 from .serializers import (
     UserSerializer,
-    UserRegistrationSerializer,
+    NationalIdPhoneTokenSerializer,
     StudentFullProfileSerializer,
     StudentPersonalSerializer,
     ProjectSerializer,
@@ -43,35 +42,10 @@ User = get_user_model()
 # ==============================================================================
 # 1. Authentication Views
 # ==============================================================================
-class RegisterView(generics.CreateAPIView):
-    """
-    Register a new user and automatically create their Student profile.
-    Returns JWT tokens and user information upon successful registration.
-    """
-    queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
-    permission_classes = [permissions.AllowAny]
+class NationalIdPhoneLoginView(TokenObtainPairView):
+    """Issue JWT tokens when national ID and phone number match an active user."""
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        refresh = RefreshToken.for_user(user)
-        student = getattr(user, 'student', None)
-
-        return Response(
-            {
-                "message": "ثبت‌نام با موفقیت انجام شد.",
-                "user": UserSerializer(user).data,
-                "student_id": student.student_id if student else None,
-                "tokens": {
-                    "refresh": str(refresh),
-                    "access": str(refresh.access_token),
-                },
-            },
-            status=status.HTTP_201_CREATED,
-        )
+    serializer_class = NationalIdPhoneTokenSerializer
 
 
 class CurrentUserView(APIView):
