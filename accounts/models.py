@@ -59,6 +59,14 @@ class Student(models.Model):
         verbose_name="شماره دانشجویی",
         help_text="شماره دانشجویی یکتا"
     )
+    national_id = models.CharField(
+        max_length=10,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name="کد ملی",
+        help_text="کد ملی یکتا برای ورود کاربر",
+    )
     headline = models.CharField(
         max_length=255,
         blank=True,
@@ -92,7 +100,8 @@ class Student(models.Model):
     phone = models.CharField(
         max_length=30,
         blank=True,
-        verbose_name="شماره تماس"
+        verbose_name="شماره تماس",
+        help_text="شماره تماس مورد استفاده برای ورود",
     )
     city = models.CharField(
         max_length=100,

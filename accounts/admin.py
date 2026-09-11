@@ -77,9 +77,9 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('student_id', 'user', 'headline', 'university', 'field_of_study', 'role', 'created_at')
+    list_display = ('student_id', 'national_id', 'phone', 'user', 'headline', 'university', 'field_of_study', 'role', 'created_at')
     list_filter = ('role', 'availability', 'created_at')
-    search_fields = ('student_id', 'headline', 'university', 'user__username', 'user__first_name', 'user__last_name', 'user__email')
+    search_fields = ('student_id', 'national_id', 'phone', 'headline', 'university', 'user__username', 'user__first_name', 'user__last_name', 'user__email')
     ordering = ('-created_at',)
     inlines = [
         ProjectInline,
