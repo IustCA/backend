@@ -110,17 +110,7 @@ class AccountUpdateView(APIView):
             if not username.replace('_', '').replace('.', '').isalnum():
                 return Response({"detail": "نام کاربری فقط می‌تواند شامل حروف، عدد، _ و . باشد."}, status=status.HTTP_400_BAD_REQUEST)
             user.username = username
-        if 'gender' in data:
-            g_val = data.get('gender')
-            if g_val in ['مرد', 'male']:
-                user.gender = 'male'
-            elif g_val in ['زن', 'female']:
-                user.gender = 'female'
-            elif g_val in [None, '']:
-                user.gender = None
-            else:
-                user.gender = g_val
-        user.save()
+            user.save()
         return Response(UserSerializer(user).data)
 
 
@@ -202,7 +192,7 @@ class StudentProfileView(APIView):
         if personal_data:
             if 'title' in personal_data:
                 student.headline = personal_data['title']
-            # 'university', 'field' (field_of_study), and 'semester' are read-only for students
+            # 'university', 'field' (field_of_study), 'semester', and 'gender' are read-only for students
             # and cannot be modified via profile updates (controlled by university/admin).
             if 'birthDate' in personal_data:
                 student.birth_date = personal_data['birthDate']
@@ -224,17 +214,6 @@ class StudentProfileView(APIView):
                 parts = personal_data['fullName'].split(' ', 1)
                 request.user.first_name = parts[0]
                 request.user.last_name = parts[1] if len(parts) > 1 else ''
-                request.user.save()
-            if 'gender' in personal_data:
-                g_val = personal_data['gender']
-                if g_val in ['مرد', 'male']:
-                    request.user.gender = 'male'
-                elif g_val in ['زن', 'female']:
-                    request.user.gender = 'female'
-                elif g_val in [None, '']:
-                    request.user.gender = None
-                else:
-                    request.user.gender = g_val
                 request.user.save()
             # avatar handling - supports multipart file or base64/data-url
             # handle clear

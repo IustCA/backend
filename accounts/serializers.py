@@ -27,7 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'gender')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'gender')
 
 
 class LoginTokenSerializer(serializers.Serializer):
@@ -272,7 +272,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
     studentId = serializers.CharField(source='student_id', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     fullName = serializers.SerializerMethodField()
-    gender = serializers.CharField(source='user.gender', required=False, allow_null=True, allow_blank=True)
+    gender = serializers.CharField(source='user.gender', read_only=True)
     birthDate = serializers.CharField(source='birth_date', required=False, allow_blank=True)
     username = serializers.SerializerMethodField()
     title = serializers.CharField(source='headline', required=False, allow_blank=True)
@@ -304,7 +304,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
             'about',
             'avatar',
         ]
-        read_only_fields = ['university', 'semester']
+        read_only_fields = ['university', 'semester', 'gender']
 
     def get_fullName(self, obj) -> str:
         return obj.user.get_full_name().strip()
@@ -395,7 +395,6 @@ class CurrentUserResponseSerializer(serializers.Serializer):
 
 
 class AccountUsernameUpdateSerializer(serializers.Serializer):
-    username = serializers.CharField(required=False, min_length=3, max_length=30)
-    gender = serializers.CharField(required=False, allow_null=True, allow_blank=True, help_text="جنسیت (male / female یا مرد / زن)")
+    username = serializers.CharField(required=True, min_length=3, max_length=30)
 
 
