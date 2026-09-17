@@ -295,6 +295,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
             'university',
             'field',
             'entryYear',
+            'role',
             'birthDate',
             'phone',
             'city',
@@ -305,7 +306,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
             'about',
             'avatar',
         ]
-        read_only_fields = ['university', 'entryYear', 'gender']
+        read_only_fields = ['university', 'entryYear', 'role', 'gender']
 
     def get_fullName(self, obj) -> str:
         return obj.user.get_full_name().strip()
