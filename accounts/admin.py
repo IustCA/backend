@@ -90,11 +90,11 @@ class StudentAdmin(admin.ModelAdmin):
         'user',
         'university',
         'field_of_study',
-        'semester',
+        'entry_year',
         'role',
         'created_at',
     )
-    list_filter = ('user__gender', 'university', 'field_of_study', 'semester', 'role', 'availability', 'created_at')
+    list_filter = ('user__gender', 'university', 'field_of_study', 'entry_year', 'role', 'availability', 'created_at')
     search_fields = (
         'student_id',
         'national_id',
@@ -102,7 +102,7 @@ class StudentAdmin(admin.ModelAdmin):
         'headline',
         'university',
         'field_of_study',
-        'semester',
+        'entry_year',
         'user__username',
         'user__first_name',
         'user__last_name',
@@ -114,7 +114,7 @@ class StudentAdmin(admin.ModelAdmin):
             'fields': ('user', 'student_id', 'national_id', 'phone'),
         }),
         ('مشخصات دانشگاهی و تحصیلی (آموزش)', {
-            'fields': ('university', 'field_of_study', 'semester', 'role'),
+            'fields': ('university', 'field_of_study', 'entry_year', 'role'),
             'description': 'این بخش توسط آموزش دانشگاه تنظیم می‌شود و برای دانشجو فقط‌خواندنی است.',
         }),
         ('اطلاعات تکمیلی پروفایل و رزومه', {

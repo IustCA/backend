@@ -277,6 +277,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
     username = serializers.SerializerMethodField()
     title = serializers.CharField(source='headline', required=False, allow_blank=True)
     field = serializers.CharField(source='field_of_study', read_only=True)
+    entryYear = serializers.CharField(source='entry_year', read_only=True)
     linkedin = serializers.CharField(source='linkedin_url', required=False, allow_blank=True)
     github = serializers.CharField(source='github_url', required=False, allow_blank=True)
     website = serializers.CharField(source='website_url', required=False, allow_blank=True)
@@ -293,7 +294,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
             'title',
             'university',
             'field',
-            'semester',
+            'entryYear',
             'birthDate',
             'phone',
             'city',
@@ -304,7 +305,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
             'about',
             'avatar',
         ]
-        read_only_fields = ['university', 'semester', 'gender']
+        read_only_fields = ['university', 'entryYear', 'gender']
 
     def get_fullName(self, obj) -> str:
         return obj.user.get_full_name().strip()

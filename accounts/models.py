@@ -108,11 +108,11 @@ class Student(models.Model):
         default="مهندسی کامپیوتر",
         verbose_name="رشته تحصیلی"
     )
-    semester = models.CharField(
+    entry_year = models.CharField(
         max_length=50,
         blank=True,
-        verbose_name="ترم تحصیلی",
-        help_text="مثلاً: ترم ششم"
+        verbose_name="سال ورود",
+        help_text="مثلاً: ۱۴۰۰"
     )
     role = models.CharField(
         max_length=50,

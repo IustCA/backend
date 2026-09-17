@@ -192,7 +192,7 @@ class StudentProfileView(APIView):
         if personal_data:
             if 'title' in personal_data:
                 student.headline = personal_data['title']
-            # 'university', 'field' (field_of_study), 'semester', and 'gender' are read-only for students
+            # 'university', 'field' (field_of_study), 'entryYear', and 'gender' are read-only for students
             # and cannot be modified via profile updates (controlled by university/admin).
             if 'birthDate' in personal_data:
                 student.birth_date = personal_data['birthDate']
