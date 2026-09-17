@@ -292,14 +292,15 @@ class StudentSearchView(APIView):
     """
     Search students by full_name with offset & limit pagination.
     Returns only: id, avatar, fullname, about.
+    Requires authentication (JWT token).
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = StudentSearchResponseSerializer
 
     @extend_schema(
         operation_id="accounts_students_search",
-        summary="جستجوی دانشجویان بر اساس نام کامل با صفحه‌بندی آفست",
-        description="جستجوی دانشجویان بر اساس نام کامل (full_name) به همراه offset و limit. خروجی فقط شامل id, avatar, fullname, about است.",
+        summary="جستجوی دانشجویان بر اساس نام کامل با صفحه‌بندی آفست (نیاز به توکن ورود)",
+        description="جستجوی دانشجویان بر اساس نام کامل (full_name) به همراه offset و limit. دسترسی فقط برای کاربران لاگین‌شده با توکن مجاز است. خروجی فقط شامل id, avatar, fullname, about است.",
         parameters=[
             OpenApiParameter('full_name', OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="جستجو بر اساس نام و نام خانوادگی"),
             OpenApiParameter('search', OpenApiTypes.STR, location=OpenApiParameter.QUERY, description="مستعار فیلد full_name"),
