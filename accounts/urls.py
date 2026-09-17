@@ -3,12 +3,14 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
+    LoginView,
     NationalIdPhoneLoginView,
     CurrentUserView,
     AccountUpdateView,
     ChangePasswordView,
     StudentProfileView,
     PublicStudentProfileView,
+    StudentSearchView,
     ProjectViewSet,
     JobHistoryViewSet,
     EducationHistoryViewSet,
@@ -37,7 +39,7 @@ router.register(r'interests', InterestViewSet, basename='interest')
 
 urlpatterns = [
     # Auth endpoints
-    path('auth/login/', NationalIdPhoneLoginView.as_view(), name='login'),
+    path('auth/login/', LoginView.as_view(), name='login'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/me/', CurrentUserView.as_view(), name='current_user'),
     path('auth/username/', AccountUpdateView.as_view(), name='update_username'),
@@ -45,7 +47,11 @@ urlpatterns = [
 
     # Profile endpoints
     path('profile/', StudentProfileView.as_view(), name='profile'),
-    path('profile/<str:student_id>/', PublicStudentProfileView.as_view(), name='public_profile'),
+    path('profile/<str:id>/', PublicStudentProfileView.as_view(), name='public_profile'),
+
+    # Search students endpoint (by full_name with offset & limit)
+    path('students/', StudentSearchView.as_view(), name='student_search'),
+    path('search/', StudentSearchView.as_view(), name='student_search_alias'),
 
     # Contact modal endpoint
     path('contact/', ContactMessageCreateView.as_view(), name='contact'),

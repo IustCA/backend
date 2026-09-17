@@ -1,4 +1,6 @@
+from typing import List, Optional
 from rest_framework import serializers
+from django.db import models
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import (
@@ -24,34 +26,59 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'gender')
         read_only_fields = ('id',)
 
 
-class NationalIdPhoneTokenSerializer(serializers.Serializer):
-    national_id = serializers.CharField(max_length=10, write_only=True)
-    phone_number = serializers.CharField(max_length=30, write_only=True)
+class LoginTokenSerializer(serializers.Serializer):
+    username = serializers.CharField(write_only=True, help_text="شماره دانشجویی")
+    password = serializers.CharField(write_only=True, help_text="کد ملی (یا رمز عبور جدید پس از تغییر)")
 
     default_error_messages = {
-        'no_active_account': 'کد ملی یا شماره تماس نادرست است.',
+        'no_active_account': 'شماره دانشجویی یا رمز عبور (کد ملی) نادرست است.',
     }
 
     def validate(self, attrs):
-        national_id = attrs['national_id'].strip()
-        phone_number = attrs['phone_number'].strip()
-        student = Student.objects.select_related('user').filter(
-            national_id=national_id,
-            phone=phone_number,
-        ).first()
+        login_id = attrs['username'].strip()
+        password = attrs['password'].strip()
 
-        if student is None or not student.user.is_active:
+        # 1. First find student by student_id (شماره دانشجویی)
+        student = Student.objects.select_related('user').filter(student_id=login_id).first()
+        if student:
+            user = student.user
+        else:
+            # Fallback to User.username
+            user = User.objects.filter(username__iexact=login_id).first()
+            student = getattr(user, 'student', None) if user else None
+
+        # 2. Verify user exists and is active
+        if user is None or not user.is_active:
             self.fail('no_active_account')
 
-        refresh = RefreshToken.for_user(student.user)
+        # 3. Check password:
+        # A) Standard check: matches current password (including custom new password)
+        password_valid = user.check_password(password)
+
+        # B) Fallback if user doesn't have a usable password set yet: initial password is national_id
+        if not password_valid and not user.has_usable_password() and student and student.national_id:
+            if student.national_id.strip() == password:
+                password_valid = True
+                user.set_password(password)
+                user.save(update_fields=['password'])
+
+        if not password_valid:
+            self.fail('no_active_account')
+
+        refresh = RefreshToken.for_user(user)
         return {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'user': UserSerializer(user).data,
         }
+
+
+# Alias for backward compatibility
+NationalIdPhoneTokenSerializer = LoginTokenSerializer
 
 
 # ==============================================================================
@@ -241,11 +268,15 @@ class ContactMessageSerializer(serializers.ModelSerializer):
 # 3. Student Personal Serializer (Frontend Personal Section)
 # ==============================================================================
 class StudentPersonalSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+    studentId = serializers.CharField(source='student_id', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
     fullName = serializers.SerializerMethodField()
+    gender = serializers.CharField(source='user.gender', required=False, allow_null=True, allow_blank=True)
     birthDate = serializers.CharField(source='birth_date', required=False, allow_blank=True)
     username = serializers.SerializerMethodField()
     title = serializers.CharField(source='headline', required=False, allow_blank=True)
-    field = serializers.CharField(source='field_of_study', required=False, allow_blank=True)
+    field = serializers.CharField(source='field_of_study', read_only=True)
     linkedin = serializers.CharField(source='linkedin_url', required=False, allow_blank=True)
     github = serializers.CharField(source='github_url', required=False, allow_blank=True)
     website = serializers.CharField(source='website_url', required=False, allow_blank=True)
@@ -253,8 +284,12 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = [
+            'id',
+            'studentId',
+            'email',
             'fullName',
             'username',
+            'gender',
             'title',
             'university',
             'field',
@@ -269,12 +304,12 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
             'about',
             'avatar',
         ]
+        read_only_fields = ['university', 'semester']
 
-    def get_fullName(self, obj):
-        full_name = obj.user.get_full_name()
-        return full_name if full_name else obj.user.username
+    def get_fullName(self, obj) -> str:
+        return obj.user.get_full_name().strip()
 
-    def get_username(self, obj):
+    def get_username(self, obj) -> str:
         return obj.user.username
 
 
@@ -282,6 +317,7 @@ class StudentPersonalSerializer(serializers.ModelSerializer):
 # 4. Nested Full Profile Serializer (Matching Frontend DEFAULT_PROFILE)
 # ==============================================================================
 class StudentFullProfileSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     personal = StudentPersonalSerializer(source='*')
     skills = SkillSerializer(many=True, read_only=True)
     education = EducationHistorySerializer(source='education_histories', many=True, read_only=True)
@@ -296,6 +332,7 @@ class StudentFullProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = [
+            'id',
             'personal',
             'skills',
             'education',
@@ -308,5 +345,57 @@ class StudentFullProfileSerializer(serializers.ModelSerializer):
             'interests',
         ]
 
-    def get_interests(self, obj):
+    def get_interests(self, obj) -> List[str]:
         return [interest.name for interest in obj.interests.all()]
+
+
+# ==============================================================================
+# 5. Lightweight Search Serializer (Only: id, avatar, fullname, about)
+# ==============================================================================
+class StudentSearchItemSerializer(serializers.ModelSerializer):
+    fullname = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = ['id', 'avatar', 'fullname', 'about']
+
+    def get_fullname(self, obj) -> str:
+        return obj.user.get_full_name().strip()
+
+    def get_avatar(self, obj) -> Optional[str]:
+        if not obj.avatar:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.avatar.url)
+        return obj.avatar.url
+
+
+# ==============================================================================
+# 6. Additional Request / Response Serializers for Swagger Documentation
+# ==============================================================================
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True, write_only=True, help_text="کد ملی اولیه یا رمز فعلی")
+    new_password = serializers.CharField(required=True, write_only=True, min_length=6, help_text="رمز عبور جدید دلخواه")
+
+
+class StudentSearchResponseSerializer(serializers.Serializer):
+    count = serializers.IntegerField(help_text="تعداد کل نتایج یافت‌شده")
+    offset = serializers.IntegerField(help_text="اندیس شروع")
+    limit = serializers.IntegerField(help_text="تعداد آیتم‌ها در صفحه")
+    results = StudentSearchItemSerializer(many=True)
+
+
+class CurrentUserResponseSerializer(serializers.Serializer):
+    id = serializers.IntegerField(help_text="شناسه دیتابیس دانشجو")
+    user = UserSerializer()
+    student_id = serializers.CharField(allow_null=True, help_text="شماره دانشجویی")
+    headline = serializers.CharField(allow_null=True)
+
+
+class AccountUsernameUpdateSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False, min_length=3, max_length=30)
+    gender = serializers.CharField(required=False, allow_null=True, allow_blank=True, help_text="جنسیت (male / female یا مرد / زن)")
+
+

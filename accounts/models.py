@@ -6,12 +6,25 @@ from django.db import models
 # ==============================================================================
 # 1. User Model
 # ==============================================================================
+class Gender(models.TextChoices):
+    MALE = 'male', 'مرد'
+    FEMALE = 'female', 'زن'
+
+
 class User(AbstractUser):
     """
     Custom User model inheriting from Django's AbstractUser.
-    Includes username, password, email (optional), first_name, last_name.
+    Includes username, password, email (optional), first_name, last_name, gender.
     """
     email = models.EmailField(unique=True, blank=True, null=True, verbose_name="ایمیل")
+    gender = models.CharField(
+        max_length=10,
+        choices=Gender.choices,
+        blank=True,
+        null=True,
+        verbose_name="جنسیت",
+        help_text="جنسیت کاربر (male / female)",
+    )
 
     class Meta:
         verbose_name = "کاربر"
@@ -166,6 +179,10 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} ({self.student_id})"
+
+    @property
+    def gender(self):
+        return self.user.gender if self.user else None
 
 
 # ==============================================================================

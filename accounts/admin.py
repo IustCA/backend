@@ -71,16 +71,67 @@ class StudentInline(admin.StackedInline):
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     inlines = (StudentInline,)
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active')
+    list_display = ('username', 'email', 'first_name', 'last_name', 'gender', 'is_staff', 'is_active')
+    list_filter = ('gender', 'is_staff', 'is_superuser', 'is_active')
     search_fields = ('username', 'first_name', 'last_name', 'email')
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ('اطلاعات تکمیلی', {'fields': ('gender',)}),
+    )
 
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('student_id', 'national_id', 'phone', 'user', 'headline', 'university', 'field_of_study', 'role', 'created_at')
-    list_filter = ('role', 'availability', 'created_at')
-    search_fields = ('student_id', 'national_id', 'phone', 'headline', 'university', 'user__username', 'user__first_name', 'user__last_name', 'user__email')
+    list_display = (
+        'student_id',
+        'national_id',
+        'get_gender',
+        'phone',
+        'user',
+        'university',
+        'field_of_study',
+        'semester',
+        'role',
+        'created_at',
+    )
+    list_filter = ('user__gender', 'university', 'field_of_study', 'semester', 'role', 'availability', 'created_at')
+    search_fields = (
+        'student_id',
+        'national_id',
+        'phone',
+        'headline',
+        'university',
+        'field_of_study',
+        'semester',
+        'user__username',
+        'user__first_name',
+        'user__last_name',
+        'user__email',
+    )
     ordering = ('-created_at',)
+    fieldsets = (
+        ('اطلاعات هویتی و ورود', {
+            'fields': ('user', 'student_id', 'national_id', 'phone'),
+        }),
+        ('مشخصات دانشگاهی و تحصیلی (آموزش)', {
+            'fields': ('university', 'field_of_study', 'semester', 'role'),
+            'description': 'این بخش توسط آموزش دانشگاه تنظیم می‌شود و برای دانشجو فقط‌خواندنی است.',
+        }),
+        ('اطلاعات تکمیلی پروفایل و رزومه', {
+            'fields': (
+                'headline',
+                'about',
+                'avatar',
+                'availability',
+                'birth_date',
+                'city',
+                'address',
+                'linkedin_url',
+                'github_url',
+                'website_url',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
     inlines = [
         ProjectInline,
         JobHistoryInline,
@@ -92,6 +143,19 @@ class StudentAdmin(admin.ModelAdmin):
         AchievementInline,
         InterestInline,
     ]
+
+    @admin.display(description='جنسیت')
+    def get_gender(self, obj):
+        return obj.user.get_gender_display() if obj.user and obj.user.gender else '-'
+
+    def save_model(self, request, obj, form, change):
+        is_new = obj.pk is None
+        super().save_model(request, obj, form, change)
+        # Initialize user's password to national_id on creation or if no usable password is set yet
+        if obj.national_id and obj.user and (is_new or not obj.user.has_usable_password()):
+            obj.user.set_password(obj.national_id.strip())
+            obj.user.save(update_fields=['password'])
+
 
 
 @admin.register(Project)
