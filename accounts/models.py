@@ -16,7 +16,7 @@ class User(AbstractUser):
     Custom User model inheriting from Django's AbstractUser.
     Includes username, password, email (optional), first_name, last_name, gender.
     """
-    email = models.EmailField(unique=True, blank=True, null=True, verbose_name="ایمیل")
+    email = models.EmailField(blank=True, null=True, verbose_name="ایمیل")
     gender = models.CharField(
         max_length=10,
         choices=Gender.choices,
@@ -34,6 +34,16 @@ class User(AbstractUser):
     def __str__(self):
         full_name = self.get_full_name()
         return full_name if full_name else self.username
+
+    def clean(self):
+        super().clean()
+        if not self.email:
+            self.email = None
+
+    def save(self, *args, **kwargs):
+        if not self.email:
+            self.email = None
+        super().save(*args, **kwargs)
 
 
 # ==============================================================================
@@ -183,6 +193,11 @@ class Student(models.Model):
     @property
     def gender(self):
         return self.user.gender if self.user else None
+
+    def save(self, *args, **kwargs):
+        if not self.national_id:
+            self.national_id = None
+        super().save(*args, **kwargs)
 
 
 # ==============================================================================

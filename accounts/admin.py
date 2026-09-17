@@ -64,6 +64,7 @@ class InterestInline(admin.TabularInline):
 class StudentInline(admin.StackedInline):
     model = Student
     can_delete = False
+    extra = 0
     verbose_name_plural = 'اطلاعات دانشجویی'
     fk_name = 'user'
 
