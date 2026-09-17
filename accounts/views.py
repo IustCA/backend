@@ -1,6 +1,8 @@
 from django.db.models import Value, Q
 from django.db.models.functions import Concat
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
@@ -25,7 +27,6 @@ from .permissions import IsOwnerOrReadOnly
 from .serializers import (
     UserSerializer,
     LoginTokenSerializer,
-    NationalIdPhoneTokenSerializer,
     StudentFullProfileSerializer,
     StudentPersonalSerializer,
     StudentSearchItemSerializer,
@@ -60,9 +61,6 @@ class LoginView(TokenObtainPairView):
     """Issue JWT tokens when username/student_id and password match an active user."""
 
     serializer_class = LoginTokenSerializer
-
-
-NationalIdPhoneLoginView = LoginView
 
 
 class CurrentUserView(APIView):
@@ -210,6 +208,18 @@ class StudentProfileView(APIView):
                 student.availability = personal_data['availability']
             if 'about' in personal_data:
                 student.about = personal_data['about']
+            if 'email' in personal_data:
+                new_email = (personal_data.get('email') or '').strip()
+                if new_email:
+                    try:
+                        validate_email(new_email)
+                    except ValidationError:
+                        return Response(
+                            {"detail": "ایمیل وارد شده معتبر نیست."},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                request.user.email = new_email
+                request.user.save(update_fields=['email'])
             if 'fullName' in personal_data and personal_data['fullName']:
                 parts = personal_data['fullName'].split(' ', 1)
                 request.user.first_name = parts[0]

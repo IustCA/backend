@@ -77,10 +77,6 @@ class LoginTokenSerializer(serializers.Serializer):
         }
 
 
-# Alias for backward compatibility
-NationalIdPhoneTokenSerializer = LoginTokenSerializer
-
-
 # ==============================================================================
 # 2. Individual Sub-Resource Serializers
 # ==============================================================================
@@ -89,6 +85,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     student = serializers.PrimaryKeyRelatedField(read_only=True)
     startDate = serializers.CharField(source='start_date', required=False, allow_blank=True)
     endDate = serializers.CharField(source='end_date', required=False, allow_blank=True)
+    # Free text so the frontend "سایر" option can store a custom category.
+    category = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
     class Meta:
         model = Project
@@ -119,6 +117,8 @@ class JobHistorySerializer(serializers.ModelSerializer):
     startDate = serializers.CharField(source='start_date', required=False, allow_blank=True)
     endDate = serializers.CharField(source='end_date', required=False, allow_blank=True)
     skillsUsed = serializers.ListField(source='skills_used', required=False, child=serializers.CharField())
+    # Free text so the frontend "سایر" option can store a custom employment type.
+    type = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
     class Meta:
         model = JobHistory
@@ -170,6 +170,8 @@ class EducationHistorySerializer(serializers.ModelSerializer):
 class SkillSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     student = serializers.PrimaryKeyRelatedField(read_only=True)
+    # Free text so the frontend "سایر" option can store a custom category.
+    category = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     class Meta:
         model = Skill
@@ -238,6 +240,8 @@ class CourseSerializer(serializers.ModelSerializer):
 class AchievementSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     student = serializers.PrimaryKeyRelatedField(read_only=True)
+    # Free text so the frontend "سایر" option can store a custom achievement type.
+    type = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     class Meta:
         model = Achievement
